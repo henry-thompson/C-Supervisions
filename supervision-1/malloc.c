@@ -16,6 +16,7 @@ struct block_meta {
 };
 
 #define META_SIZE sizeof(struct block_meta)
+#define ALIGNMENT 16
 
 struct block_meta *global_base;
 
@@ -62,11 +63,19 @@ struct block_meta *request_space(struct block_meta* last, size_t size) {
  */
 void *malloc(size_t size) {
   struct block_meta *block;
-  // TODO: align size?
 
   if (size <= 0) {
     return NULL;
   }
+
+  int alignmentExcess = size % ALIGNMENT;
+  int alignmentPadding = 0;
+
+  if (alignmentExcess != 0) {
+    alignmentPadding = ALIGNMENT - alignmentExcess;
+  }
+
+  size += alignmentPadding;
 
   if (!global_base) { // First call.
     block = request_space(NULL, size);
