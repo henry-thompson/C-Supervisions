@@ -93,6 +93,10 @@ void *malloc(size_t size) {
       }
     } else {      // Found free block
       // TODO: consider splitting block here.
+      if (block->size > size) {
+        struct block_meta block = { .size = block->size, .next = block->next, .free = 1, .magic = 0x12345 };
+        
+      }
       block->free = 0;
       #ifdef DEBUG
       block->magic = 0x77777777;
