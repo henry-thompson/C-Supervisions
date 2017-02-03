@@ -94,7 +94,8 @@ void *malloc(size_t size) {
 
   size += alignmentPadding;
 
-  if (!global_base) { // First call.
+  if (!global_base) {
+    // First call.
     block = request_space(NULL, size);
     
     if (!block) {
@@ -106,17 +107,34 @@ void *malloc(size_t size) {
   } else {
     struct block_meta *last = global_base;
     block = find_free_block(&last, size);
-    if (!block) { // Failed to find free block.
+
+    if (!block) {
+      // Failed to find free block.
       block = request_space(last, size);
       
       if (!block) {
         return NULL;
       }
-    } else {      // Found free block
-      // TODO: consider splitting block here.
-      if (block->size > size) {
-        struct block_meta block = { .size = block->size, .next = block->next, .free = 1, .magic = 0x12345 };
+
+    } else {
+      // We've found a free block
+
+      if (block->size > size + META_SIZE) {
+        // Split the block.
+
+        // This block will go after the current block
+        struct block_meta *block2 = (void*) (((void*) block) + META_SIZE + size);
         
+        block2->size = block->size - size - META_SIZE,
+        block2->next = block->next,
+        block2->free = 1,
+        #ifdef DEBUG
+        block2->magic = 0x12345
+        #endif
+
+        // Reduce the size of the original and correct the list
+        block->size = size;
+        block->next = block2;
       }
 
       block->free = 0;
