@@ -75,6 +75,25 @@ struct block_meta *request_space(struct block_meta* last, size_t size) {
   return block;
 }
 
+
+/**
+ * Merges adjacent free blocks of memory.
+ */
+void mergeAdjacent() {
+  struct block_meta *current = global_base;
+
+  while (current) {
+    if (current->free && current->next && current->next->free) {
+      // Current block is free, as is the next one. Merge.
+      current->size += current->next->size + META_SIZE;
+      current->next = current->next->next;
+      continue;
+    }
+
+    current = current->next;
+  }
+}
+
 /**
  *  Allocates `size` bytes onto the heap.
  */
@@ -162,7 +181,6 @@ void free(void *ptr) {
     return;
   }
 
-  // TODO: consider merging blocks once splitting blocks is implemented.
   struct block_meta* block_ptr = get_block_ptr(ptr);
   assert(block_ptr->free == 0);
   block_ptr->free = 1;
@@ -170,6 +188,9 @@ void free(void *ptr) {
   assert(block_ptr->magic == 0x77777777 || block_ptr->magic == 0x12345678);
   block_ptr->magic = 0x55555555;
   #endif
+
+  // Merge adjacent free blocks of memory.
+  mergeAdjacent();
 }
 
 /**
