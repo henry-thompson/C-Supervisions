@@ -6,18 +6,32 @@
 // Reimplementation of malloc, realloc, calloc and free following the tutorial at
 // http://danluu.com/malloc-tutorial/
 
+/** The metadata associated with each block of data within the heap. */
 struct block_meta {
+  /** The size of the data contained in the heap, not including the meta block itself */
   size_t size;
+
+  /**
+   *  The blocks are represented in a linked list. This points to the next one along operator or
+   *  is NULL if it is the last.
+   */
   struct block_meta *next;
+
+  /** Indicates whether this block has been free'd or not. */
   int free;
+
   #ifdef DEBUG
-  int magic; // For debugging only. TODO: remove this in non-debug mode.
+  /** Makes finding the blocks easier in memory dumps. */
+  int magic;
   #endif
 };
 
+/** The number of bytes in memory occupied by the metadata per block */
 #define META_SIZE sizeof(struct block_meta)
+/** The number of bytes alignment is performed to in the target machine */
 #define ALIGNMENT 16
 
+/** The head to the linked-list representing consecutive blocks of assigned memory */
 struct block_meta *global_base;
 
 /**
@@ -26,10 +40,12 @@ struct block_meta *global_base;
  */
 struct block_meta *find_free_block(struct block_meta **last, size_t size) {
   struct block_meta *current = global_base;
+
   while (current && !(current->free && current->size >= size)) {
     *last = current;
     current = current->next;
   }
+
   return current;
 }
 
@@ -41,6 +57,7 @@ struct block_meta *request_space(struct block_meta* last, size_t size) {
   block = sbrk(0);
   void *request = sbrk(size + META_SIZE);
   assert((void*)block == request); // Not thread safe.
+
   if (request == (void*) -1) {
     return NULL; // sbrk failed.
   }
@@ -79,15 +96,19 @@ void *malloc(size_t size) {
 
   if (!global_base) { // First call.
     block = request_space(NULL, size);
+    
     if (!block) {
       return NULL;
     }
+    
     global_base = block;
+
   } else {
     struct block_meta *last = global_base;
     block = find_free_block(&last, size);
     if (!block) { // Failed to find free block.
       block = request_space(last, size);
+      
       if (!block) {
         return NULL;
       }
@@ -97,6 +118,7 @@ void *malloc(size_t size) {
         struct block_meta block = { .size = block->size, .next = block->next, .free = 1, .magic = 0x12345 };
         
       }
+
       block->free = 0;
       #ifdef DEBUG
       block->magic = 0x77777777;
