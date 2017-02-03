@@ -67,7 +67,7 @@ namespace ht367
             protected:
             T value;
         };
-        
+
         class EmptyListException {};
 
         template<class T, T Id, MonoidType Op>
